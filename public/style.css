@@ -15,7 +15,7 @@ body {
 
 /* ===== LOGIN ===== */
 #loginBox {
-  max-width: 320px;
+  max-width: 340px;
   margin: 80px auto;
   background: #111827;
   padding: 25px;
@@ -38,6 +38,7 @@ input {
   outline: none;
   background: #1f2937;
   color: white;
+  font-size: 16px;
 }
 
 button {
@@ -49,6 +50,7 @@ button {
   color: black;
   font-weight: bold;
   cursor: pointer;
+  font-size: 16px;
 }
 
 button:hover {
@@ -73,9 +75,10 @@ button:hover {
 #chatList div {
   background: #1f2937;
   margin: 6px;
-  padding: 10px;
+  padding: 12px;
   border-radius: 8px;
   cursor: pointer;
+  text-align: center;
 }
 
 #chatList div:hover {
@@ -84,14 +87,14 @@ button:hover {
 }
 
 /* ===== ÁREA DO CHAT ===== */
-#chatWindow #chatWindow {
+#chatWindow {
   flex: 1;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #0f172a, #1e293b);
 }
 
-/* topo */
+/* topo do chat */
 #chatTitle {
   background: #111827;
   padding: 12px;
@@ -106,33 +109,78 @@ button:hover {
   overflow-y: auto;
 }
 
-/* balões */
+/* balões de mensagem */
 #messages p {
-  padding: 8px 12px;
+  padding: 10px 14px;
   margin: 6px;
-  border-radius: 10px;
-  max-width: 70%;
+  border-radius: 12px;
+  max-width: 75%;
   word-wrap: break-word;
+  background: #1f2937;
 }
 
-/* mensagem recebida */
-#messages p b:not(:contains("Você")) {
+/* nome do remetente */
+#messages b {
   color: #22c55e;
 }
 
-/* ===== envio ===== */
+/* ===== ÁREA DE ENVIO ===== */
 #messageInput {
   width: 80%;
   margin: 10px;
 }
 
-#chatWindow button {
-  background: #22c55e;
-}
+/* ===== RESPONSIVO PARA CELULAR ===== */
+@media (max-width: 768px) {
 
-/* ===== RESPONSIVO ===== */
-@media (max-width: 600px) {
+  body {
+    font-size: 18px;
+  }
+
+  /* Login ocupa melhor a tela */
+  #loginBox {
+    width: 90%;
+    margin-top: 40px;
+  }
+
+  input {
+    width: 95%;
+    font-size: 18px;
+    padding: 14px;
+  }
+
+  button {
+    font-size: 18px;
+    padding: 14px;
+    width: 90%;
+  }
+
+  /* App em coluna */
+  #appBox {
+    flex-direction: column;
+  }
+
+  /* Lista de chats no topo horizontal */
   #chatList {
-    width: 35%;
+    width: 100%;
+    display: flex;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 2px solid #1f2937;
+  }
+
+  #chatList div {
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+
+  /* Mensagens ocupam tela */
+  #messages {
+    height: 60vh;
+  }
+
+  #messageInput {
+    width: 70%;
+    font-size: 18px;
   }
 }
