@@ -8,11 +8,18 @@ app.use(express.static("public"));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// "Banco de dados"
 let users = {};       // username -> {password, id}
 let usersById = {};   // id -> username
-let sockets = {};     // id -> websocket
+let sockets = {};     // id -> ws
+
+// histórico: "id1-id2" -> [ {fromName,text} ]
+let chats = {};
+
 let nextId = 1;
+
+function chatKey(a, b){
+  return [Math.min(a,b), Math.max(a,b)].join("-");
+}
 
 wss.on("connection", (ws) => {
 
@@ -30,16 +37,20 @@ wss.on("connection", (ws) => {
       users[msg.username] = { password: msg.password, id };
       usersById[id] = msg.username;
 
+      // já registra socket e faz login automático
+      ws.userId = id;
+      sockets[id] = ws;
+
       ws.send(JSON.stringify({
         type: "register-success",
-        id
+        id,
+        username: msg.username
       }));
     }
 
     // ===== LOGIN =====
     if (msg.type === "login") {
       const user = users[msg.username];
-
       if (user && user.password === msg.password) {
         ws.userId = user.id;
         sockets[user.id] = ws;
@@ -54,20 +65,44 @@ wss.on("connection", (ws) => {
       }
     }
 
-    // ===== MENSAGEM PRIVADA =====
+    // ===== PEDIR HISTÓRICO =====
+    if (msg.type === "load-chat") {
+      const fromId = ws.userId;
+      const toId = msg.withId;
+      const key = chatKey(fromId, toId);
+      const history = chats[key] || [];
+
+      ws.send(JSON.stringify({
+        type: "chat-history",
+        withId: toId,
+        history
+      }));
+    }
+
+    // ===== MENSAGEM =====
     if (msg.type === "private-message") {
       const fromId = ws.userId;
       const toId = Number(msg.to);
 
-      const targetSocket = sockets[toId];
-      if (!targetSocket) return;
+      if (fromId === toId) return; // impede falar consigo mesmo
 
-      targetSocket.send(JSON.stringify({
-        type: "private-message",
-        fromId,
-        fromName: usersById[fromId],
-        text: msg.text
-      }));
+      const text = msg.text.slice(0, 20000); // limite 20k
+
+      const fromName = usersById[fromId];
+      const key = chatKey(fromId, toId);
+
+      if (!chats[key]) chats[key] = [];
+      chats[key].push({ fromName, text });
+
+      const targetSocket = sockets[toId];
+      if (targetSocket) {
+        targetSocket.send(JSON.stringify({
+          type: "private-message",
+          fromId,
+          fromName,
+          text
+        }));
+      }
     }
   });
 
