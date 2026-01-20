@@ -84,12 +84,11 @@ button:hover {
 }
 
 /* ===== ÁREA DO CHAT ===== */
-#chatWindow {
+#chatWindow #chatWindow {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: url("https://i.imgur.com/9j6KQzU.png");
-  background-size: cover;
+  background: linear-gradient(180deg, #0f172a, #1e293b);
 }
 
 /* topo */
