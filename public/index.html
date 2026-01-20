@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Fast Mini Chat</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="box" id="loginBox">
+    <h2>Fast Mini Chat</h2>
+    <input id="name" placeholder="Nome">
+    <input id="pass" type="password" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <button onclick="register()">Criar Conta</button>
+    <div id="status"></div>
+</div>
+
+<div class="box" id="chatBox" style="display:none;">
+    <h2>💬 Fast Mini Chat</h2>
+    <div id="messages"></div>
+    <input id="text" placeholder="Mensagem">
+    <button onclick="sendMsg()">Enviar</button>
+</div>
+
+<script>
+const ws = new WebSocket(
+    (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+);
+
+ws.onmessage = (event)=>{
+    const msg = JSON.parse(event.data);
+
+    if(msg.type==="login_ok"){
+        loginBox.style.display="none";
+        chatBox.style.display="block";
+    }
+
+    if(msg.type==="chat"){
+        const div = document.createElement("div");
+        div.innerHTML = "<b>"+msg.user+":</b> "+msg.text;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    if(msg.type==="error" || msg.type==="success"){
+        status.innerText = msg.text;
+    }
+};
+
+function register(){
+    ws.send(JSON.stringify({
+        type:"register",
+        name: name.value,
+        pass: pass.value
+    }));
+}
+
+function login(){
+    ws.send(JSON.stringify({
+        type:"login",
+        name: name.value,
+        pass: pass.value
+    }));
+}
+
+function sendMsg(){
+    if(text.value.trim()=="") return;
+    ws.send(JSON.stringify({
+        type:"chat",
+        text: text.value
+    }));
+    text.value="";
+}
+</script>
+</body>
+</html>
