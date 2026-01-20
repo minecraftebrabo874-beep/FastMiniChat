@@ -1,186 +1,111 @@
-/* ===== RESET ===== */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing:border-box; margin:0; padding:0; }
 
-/* ===== FUNDO ===== */
 body {
   font-family: Arial, sans-serif;
   background: linear-gradient(135deg, #0f172a, #1e293b);
   color: white;
-  height: 100vh;
+  height:100vh;
 }
 
-/* ===== LOGIN ===== */
+/* LOGIN */
 #loginBox {
-  max-width: 340px;
-  margin: 80px auto;
-  background: #111827;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px #000;
-  text-align: center;
+  width:90%;
+  max-width:380px;
+  margin:40px auto;
+  background:#111827;
+  padding:30px;
+  border-radius:15px;
+  text-align:center;
+  box-shadow:0 0 25px #000;
 }
 
 #loginBox h2 {
-  margin-bottom: 15px;
-  color: #22c55e;
+  color:#22c55e;
+  margin-bottom:15px;
 }
 
 input {
-  width: 90%;
-  padding: 10px;
-  margin: 6px 0;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-  background: #1f2937;
-  color: white;
-  font-size: 16px;
+  width:95%;
+  padding:16px;
+  margin:8px 0;
+  border-radius:10px;
+  border:none;
+  background:#1f2937;
+  color:white;
+  font-size:18px;
 }
 
 button {
-  padding: 10px 15px;
-  margin: 6px;
-  border: none;
-  border-radius: 8px;
-  background: #22c55e;
-  color: black;
-  font-weight: bold;
-  cursor: pointer;
-  font-size: 16px;
+  width:95%;
+  padding:16px;
+  margin-top:8px;
+  border:none;
+  border-radius:10px;
+  background:#22c55e;
+  color:black;
+  font-weight:bold;
+  font-size:18px;
 }
 
-button:hover {
-  background: #16a34a;
-}
-
-/* ===== APP ===== */
+/* APP */
 #appBox {
-  display: flex;
-  height: 100vh;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
 }
 
-/* ===== LISTA DE CHATS ===== */
+/* lista chats horizontal mobile */
 #chatList {
-  width: 30%;
-  background: #111827;
-  padding: 10px;
-  overflow-y: auto;
-  border-right: 2px solid #1f2937;
+  display:flex;
+  overflow-x:auto;
+  background:#111827;
+  padding:10px;
 }
 
 #chatList div {
-  background: #1f2937;
-  margin: 6px;
-  padding: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  text-align: center;
+  background:#1f2937;
+  padding:14px;
+  margin-right:8px;
+  border-radius:10px;
+  min-width:140px;
+  text-align:center;
 }
 
-#chatList div:hover {
-  background: #22c55e;
-  color: black;
-}
-
-/* ===== ÁREA DO CHAT ===== */
+/* chat window */
 #chatWindow {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #0f172a, #1e293b);
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  background: linear-gradient(180deg,#0f172a,#1e293b);
 }
 
-/* topo do chat */
 #chatTitle {
-  background: #111827;
-  padding: 12px;
-  text-align: center;
-  border-bottom: 2px solid #1f2937;
+  background:#111827;
+  padding:14px;
+  text-align:center;
 }
 
-/* mensagens */
 #messages {
-  flex: 1;
-  padding: 15px;
-  overflow-y: auto;
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
 }
 
-/* balões de mensagem */
 #messages p {
-  padding: 10px 14px;
-  margin: 6px;
-  border-radius: 12px;
-  max-width: 75%;
-  word-wrap: break-word;
-  background: #1f2937;
+  background:#1f2937;
+  padding:12px;
+  margin:6px;
+  border-radius:12px;
+  font-size:18px;
 }
 
-/* nome do remetente */
 #messages b {
-  color: #22c55e;
+  color:#22c55e;
 }
 
-/* ===== ÁREA DE ENVIO ===== */
 #messageInput {
-  width: 80%;
-  margin: 10px;
-}
-
-/* ===== RESPONSIVO PARA CELULAR ===== */
-@media (max-width: 768px) {
-
-  body {
-    font-size: 18px;
-  }
-
-  /* Login ocupa melhor a tela */
-  #loginBox {
-    width: 90%;
-    margin-top: 40px;
-  }
-
-  input {
-    width: 95%;
-    font-size: 18px;
-    padding: 14px;
-  }
-
-  button {
-    font-size: 18px;
-    padding: 14px;
-    width: 90%;
-  }
-
-  /* App em coluna */
-  #appBox {
-    flex-direction: column;
-  }
-
-  /* Lista de chats no topo horizontal */
-  #chatList {
-    width: 100%;
-    display: flex;
-    overflow-x: auto;
-    border-right: none;
-    border-bottom: 2px solid #1f2937;
-  }
-
-  #chatList div {
-    min-width: 120px;
-    flex-shrink: 0;
-  }
-
-  /* Mensagens ocupam tela */
-  #messages {
-    height: 60vh;
-  }
-
-  #messageInput {
-    width: 70%;
-    font-size: 18px;
-  }
+  width:95%;
+  margin:10px auto;
+  display:block;
+  font-size:18px;
 }
