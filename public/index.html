@@ -10,34 +10,23 @@
 <!-- LOGIN -->
 <div id="loginBox">
   <h2>Fast Mini Chat</h2>
-
   <input id="username" placeholder="Nome">
   <input id="password" type="password" placeholder="Senha">
   <br>
-
   <button onclick="register()">Criar conta</button>
   <button onclick="login()">Entrar</button>
-
   <p id="status"></p>
 </div>
 
 <!-- APP -->
 <div id="appBox" style="display:none;">
-
   <h3>Seu ID: <span id="myIdSpan"></span></h3>
 
-  <!-- adicionar novo chat -->
   <input id="newChatId" placeholder="ID do amigo">
   <button onclick="openChat()">Abrir chat</button>
 
-  <hr>
-
-  <!-- lista de chats -->
   <div id="chatList"></div>
 
-  <hr>
-
-  <!-- janela da conversa -->
   <div id="chatWindow" style="display:none;">
     <h3 id="chatTitle"></h3>
     <div id="messages"></div>
@@ -45,12 +34,11 @@
     <input id="messageInput" placeholder="Mensagem">
     <button onclick="sendMessage()">Enviar</button>
   </div>
-
 </div>
 
 <script>
 const ws = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+ (location.protocol === "https:" ? "wss://" : "ws://") + location.host
 );
 
 let myId = null;
@@ -66,13 +54,18 @@ const chatList = document.getElementById("chatList");
 const chatWindow = document.getElementById("chatWindow");
 const chatTitle = document.getElementById("chatTitle");
 const messages = document.getElementById("messages");
+const messageInput = document.getElementById("messageInput");
 
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
 
-  // registro
+  // registro auto-login
   if (msg.type === "register-success") {
-    statusText.innerText = "Conta criada! Seu ID: " + msg.id;
+    myId = msg.id;
+    myName = msg.username;
+    loginBox.style.display = "none";
+    appBox.style.display = "block";
+    myIdSpan.innerText = myId;
   }
 
   if (msg.type === "register-error") {
@@ -82,8 +75,7 @@ ws.onmessage = (event) => {
   // login
   if (msg.type === "login-success") {
     myId = msg.id;
-    myName = username.value;
-
+    myName = msg.username;
     loginBox.style.display = "none";
     appBox.style.display = "block";
     myIdSpan.innerText = myId;
@@ -93,24 +85,29 @@ ws.onmessage = (event) => {
     statusText.innerText = "Login inválido!";
   }
 
-  // receber mensagem
+  // histórico recebido
+  if (msg.type === "chat-history") {
+    messages.innerHTML = "";
+    msg.history.forEach(m => {
+      messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
+    });
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // mensagem recebida
   if (msg.type === "private-message") {
     const chatId = msg.fromId;
 
-    // cria chat se não existir
     if (!document.getElementById("chat-" + chatId)) {
       addChat(chatId, msg.fromName);
     }
 
-    // se estiver no chat aberto, mostra mensagem
     if (currentChatId == chatId) {
       messages.innerHTML += `<p><b>${msg.fromName}:</b> ${msg.text}</p>`;
       messages.scrollTop = messages.scrollHeight;
     }
   }
 };
-
-// ===== funções =====
 
 function register(){
   ws.send(JSON.stringify({
@@ -128,44 +125,47 @@ function login(){
   }));
 }
 
-// adiciona chat na lista
 function addChat(id, name){
   const div = document.createElement("div");
   div.id = "chat-" + id;
   div.innerText = name + " (ID: " + id + ")";
-  div.style.cursor = "pointer";
-  div.style.margin = "5px";
   div.onclick = () => selectChat(id, name);
   chatList.appendChild(div);
 }
 
-// abrir chat manualmente digitando ID
 function openChat(){
   const id = Number(document.getElementById("newChatId").value);
-  if (!id) return;
+  if (!id || id === myId) return; // impede abrir chat consigo mesmo
   addChat(id, "Usuário " + id);
+  selectChat(id, "Usuário " + id);
 }
 
-// selecionar chat
 function selectChat(id, name){
   currentChatId = id;
   chatWindow.style.display = "block";
   chatTitle.innerText = "Conversando com: " + name;
-  messages.innerHTML = "";
+
+  // pedir histórico
+  ws.send(JSON.stringify({
+    type:"load-chat",
+    withId: id
+  }));
 }
 
-// enviar mensagem
 function sendMessage(){
-  if (!currentChatId || !messageInput.value) return;
+  if (!currentChatId) return;
+  if (!messageInput.value) return;
+  if (currentChatId === myId) return;
+
+  const text = messageInput.value.slice(0,20000);
 
   ws.send(JSON.stringify({
     type:"private-message",
     to: currentChatId,
-    text: messageInput.value
+    text
   }));
 
-  // mostra sua própria mensagem
-  messages.innerHTML += `<p><b>Você:</b> ${messageInput.value}</p>`;
+  messages.innerHTML += `<p><b>Você:</b> ${text}</p>`;
   messages.scrollTop = messages.scrollHeight;
   messageInput.value = "";
 }
