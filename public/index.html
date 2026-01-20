@@ -21,7 +21,7 @@
 </div>
 
 <div id="chatBox" style="display:none;">
-  <h3>Seu ID: <span id="myId"></span></h3>
+  <h3>Seu ID: <span id="myIdSpan"></span></h3>
 
   <input id="targetId" placeholder="ID do amigo">
 
@@ -32,18 +32,33 @@
 </div>
 
 <script>
-let ws = new WebSocket(location.origin.replace("http","ws"));
+const loginBox = document.getElementById("loginBox");
+const chatBox = document.getElementById("chatBox");
+const statusText = document.getElementById("status");
+const myIdSpan = document.getElementById("myIdSpan");
+const messages = document.getElementById("messages");
+
+const username = document.getElementById("username");
+const password = document.getElementById("password");
+const targetId = document.getElementById("targetId");
+const messageInput = document.getElementById("messageInput");
+
+// WebSocket (funciona local e na Render)
+const ws = new WebSocket(
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+);
+
 let myId = null;
 
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
 
   if (msg.type === "register-success") {
-    status.innerText = "Conta criada! Seu ID: " + msg.id;
+    statusText.innerText = "Conta criada! Seu ID: " + msg.id;
   }
 
   if (msg.type === "register-error") {
-    status.innerText = "Nome já existe!";
+    statusText.innerText = "Nome já existe!";
   }
 
   if (msg.type === "login-success") {
@@ -54,15 +69,21 @@ ws.onmessage = (event) => {
   }
 
   if (msg.type === "login-error") {
-    status.innerText = "Login inválido!";
+    statusText.innerText = "Login inválido!";
   }
 
   if (msg.type === "private-message") {
     messages.innerHTML += `<p><b>${msg.from}:</b> ${msg.text}</p>`;
+    messages.scrollTop = messages.scrollHeight;
   }
 };
 
 function register(){
+  if (!username.value || !password.value) {
+    statusText.innerText = "Preencha nome e senha!";
+    return;
+  }
+
   ws.send(JSON.stringify({
     type:"register",
     username: username.value,
@@ -79,11 +100,18 @@ function login(){
 }
 
 function sendMessage(){
+  if (!targetId.value || !messageInput.value) return;
+
   ws.send(JSON.stringify({
     type:"private-message",
     to: targetId.value,
     text: messageInput.value
   }));
+
+  // Mostra sua própria mensagem na tela
+  messages.innerHTML += `<p><b>Você:</b> ${messageInput.value}</p>`;
+  messages.scrollTop = messages.scrollHeight;
+
   messageInput.value = "";
 }
 </script>
