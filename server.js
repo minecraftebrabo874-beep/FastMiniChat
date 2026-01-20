@@ -8,17 +8,18 @@ app.use(express.static("public"));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// Banco de dados em memória
+// "Banco de dados"
 let users = {};       // username -> {password, id}
+let usersById = {};   // id -> username
 let sockets = {};     // id -> websocket
-let nextId = 1;       // ID único incremental
+let nextId = 1;
 
 wss.on("connection", (ws) => {
 
   ws.on("message", (data) => {
     const msg = JSON.parse(data);
 
-    // ===== REGISTRAR CONTA =====
+    // ===== REGISTRAR =====
     if (msg.type === "register") {
       if (users[msg.username]) {
         ws.send(JSON.stringify({ type: "register-error" }));
@@ -27,6 +28,7 @@ wss.on("connection", (ws) => {
 
       const id = nextId++;
       users[msg.username] = { password: msg.password, id };
+      usersById[id] = msg.username;
 
       ws.send(JSON.stringify({
         type: "register-success",
@@ -44,7 +46,8 @@ wss.on("connection", (ws) => {
 
         ws.send(JSON.stringify({
           type: "login-success",
-          id: user.id
+          id: user.id,
+          username: msg.username
         }));
       } else {
         ws.send(JSON.stringify({ type: "login-error" }));
@@ -53,22 +56,23 @@ wss.on("connection", (ws) => {
 
     // ===== MENSAGEM PRIVADA =====
     if (msg.type === "private-message") {
-      const targetSocket = sockets[msg.to];
+      const fromId = ws.userId;
+      const toId = Number(msg.to);
 
-      if (targetSocket) {
-        targetSocket.send(JSON.stringify({
-          type: "private-message",
-          from: ws.userId,
-          text: msg.text
-        }));
-      }
+      const targetSocket = sockets[toId];
+      if (!targetSocket) return;
+
+      targetSocket.send(JSON.stringify({
+        type: "private-message",
+        fromId,
+        fromName: usersById[fromId],
+        text: msg.text
+      }));
     }
   });
 
   ws.on("close", () => {
-    if (ws.userId) {
-      delete sockets[ws.userId];
-    }
+    if (ws.userId) delete sockets[ws.userId];
   });
 });
 
