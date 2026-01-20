@@ -1,57 +1,77 @@
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
-const path = require("path");
 
 const app = express();
+app.use(express.static("public"));
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let users = {}; 
+// Banco de dados em memória
+let users = {};       // username -> {password, id}
+let sockets = {};     // id -> websocket
+let nextId = 1;       // ID único incremental
 
-wss.on("connection", ws => {
-    ws.on("message", data => {
-        const msg = JSON.parse(data);
+wss.on("connection", (ws) => {
 
-        // Criar conta
-        if(msg.type === "register"){
-            if(users[msg.name]){
-                ws.send(JSON.stringify({type:"error", text:"Usuário já existe"}));
-            } else {
-                users[msg.name] = msg.pass;
-                ws.send(JSON.stringify({type:"success", text:"Conta criada!"}));
-            }
-        }
+  ws.on("message", (data) => {
+    const msg = JSON.parse(data);
 
-        // Login
-        if(msg.type === "login"){
-            if(users[msg.name] === msg.pass){
-                ws.user = msg.name;
-                ws.send(JSON.stringify({type:"login_ok"}));
-            } else {
-                ws.send(JSON.stringify({type:"error", text:"Login inválido"}));
-            }
-        }
+    // ===== REGISTRAR CONTA =====
+    if (msg.type === "register") {
+      if (users[msg.username]) {
+        ws.send(JSON.stringify({ type: "register-error" }));
+        return;
+      }
 
-        // Chat
-        if(msg.type === "chat"){
-            if(!ws.user) return;
-            const pacote = JSON.stringify({
-                type:"chat",
-                user: ws.user,
-                text: msg.text
-            });
-            wss.clients.forEach(client=>{
-                if(client.readyState === WebSocket.OPEN){
-                    client.send(pacote);
-                }
-            });
-        }
-    });
+      const id = nextId++;
+      users[msg.username] = { password: msg.password, id };
+
+      ws.send(JSON.stringify({
+        type: "register-success",
+        id
+      }));
+    }
+
+    // ===== LOGIN =====
+    if (msg.type === "login") {
+      const user = users[msg.username];
+
+      if (user && user.password === msg.password) {
+        ws.userId = user.id;
+        sockets[user.id] = ws;
+
+        ws.send(JSON.stringify({
+          type: "login-success",
+          id: user.id
+        }));
+      } else {
+        ws.send(JSON.stringify({ type: "login-error" }));
+      }
+    }
+
+    // ===== MENSAGEM PRIVADA =====
+    if (msg.type === "private-message") {
+      const targetSocket = sockets[msg.to];
+
+      if (targetSocket) {
+        targetSocket.send(JSON.stringify({
+          type: "private-message",
+          from: ws.userId,
+          text: msg.text
+        }));
+      }
+    }
+  });
+
+  ws.on("close", () => {
+    if (ws.userId) {
+      delete sockets[ws.userId];
+    }
+  });
 });
 
-app.use(express.static(path.join(__dirname, "public")));
-
-server.listen(process.env.PORT || 3000, ()=>{
-    console.log("Fast Mini Chat rodando...");
+server.listen(3000, () => {
+  console.log("Fast Mini Chat rodando...");
 });
