@@ -30,10 +30,14 @@
 
   <div id="chatWindow" style="display:none;">
     <h3 id="chatTitle"></h3>
-    <div id="messages"></div>
+    <div id="messagesContainer">
+      <ul id="messages"></ul>
+    </div>
 
-    <input id="messageInput" placeholder="Mensagem">
-    <button onclick="sendMessage()">Enviar</button>
+    <div id="messageForm">
+      <input id="messageInput" placeholder="Mensagem">
+      <button onclick="sendMessage()">Enviar</button>
+    </div>
   </div>
 </div>
 
@@ -54,36 +58,35 @@ const myIdSpan = document.getElementById("myIdSpan");
 const chatList = document.getElementById("chatList");
 const chatWindow = document.getElementById("chatWindow");
 const chatTitle = document.getElementById("chatTitle");
+const messagesContainer = document.getElementById("messagesContainer");
 const messages = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 
-// histórico local (por chat)
+// histórico local por chat
 const chatHistory = {};
+const chatsOpen = []; // lista de chats que o usuário abriu
 
 // ===== WEBSOCKET =====
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
 
   // registro auto-login
-  if (msg.type === "register-success") {
+  if (msg.type === "register-success" || msg.type === "login-success") {
     myId = msg.id;
     myName = msg.username;
     loginBox.style.display = "none";
     appBox.style.display = "block";
     myIdSpan.innerText = myId;
+
+    // carrega chats previamente abertos
+    if(localStorage.getItem("chatsOpen")){
+      const savedChats = JSON.parse(localStorage.getItem("chatsOpen"));
+      savedChats.forEach(c => addChat(c.id, c.name, false));
+    }
   }
 
   if (msg.type === "register-error") {
     statusText.innerText = "Nome já existe!";
-  }
-
-  // login
-  if (msg.type === "login-success") {
-    myId = msg.id;
-    myName = msg.username;
-    loginBox.style.display = "none";
-    appBox.style.display = "block";
-    myIdSpan.innerText = myId;
   }
 
   if (msg.type === "login-error") {
@@ -96,11 +99,7 @@ ws.onmessage = (event) => {
     chatHistory[id] = msg.history;
 
     if (currentChatId === id) {
-      messages.innerHTML = "";
-      chatHistory[id].forEach(m => {
-        messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
-      });
-      messages.scrollTop = messages.scrollHeight;
+      renderMessages(id);
     }
   }
 
@@ -112,12 +111,11 @@ ws.onmessage = (event) => {
     chatHistory[chatId].push({ fromName: msg.fromName, text: msg.text });
 
     if (!document.getElementById("chat-" + chatId)) {
-      addChat(chatId, msg.fromName);
+      addChat(chatId, msg.fromName, true);
     }
 
     if (currentChatId === chatId) {
-      messages.innerHTML += `<p><b>${msg.fromName}:</b> ${msg.text}</p>`;
-      messages.scrollTop = messages.scrollHeight;
+      renderMessages(chatId);
     }
   }
 };
@@ -139,12 +137,18 @@ function login() {
   }));
 }
 
-function addChat(id, name){
+function addChat(id, name, save=true){
   const div = document.createElement("div");
   div.id = "chat-" + id;
   div.innerText = name + " (ID: " + id + ")";
   div.onclick = () => selectChat(id, name);
   chatList.appendChild(div);
+
+  // salvar chats abertos
+  if(save){
+    chatsOpen.push({id, name});
+    localStorage.setItem("chatsOpen", JSON.stringify(chatsOpen));
+  }
 }
 
 function openChat(){
@@ -156,17 +160,11 @@ function openChat(){
 
 function selectChat(id, name){
   currentChatId = id;
-  chatWindow.style.display = "block";
+  chatWindow.style.display = "flex";
   chatTitle.innerText = "Conversando com: " + name;
 
   // exibe histórico salvo local
-  if (chatHistory[id]) {
-    messages.innerHTML = "";
-    chatHistory[id].forEach(m => {
-      messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
-    });
-    messages.scrollTop = messages.scrollHeight;
-  }
+  renderMessages(id);
 
   // pede histórico do servidor
   ws.send(JSON.stringify({
@@ -178,24 +176,31 @@ function selectChat(id, name){
 function sendMessage(){
   if (!currentChatId) return;
   if (!messageInput.value) return;
-  if (currentChatId === myId) return; // impede falar consigo mesmo
+  if (currentChatId === myId) return;
 
   const text = messageInput.value.slice(0,20000); // limite 20k
 
-  // envia
   ws.send(JSON.stringify({
     type:"private-message",
     to: currentChatId,
     text
   }));
 
-  // salva local e mostra
   if (!chatHistory[currentChatId]) chatHistory[currentChatId] = [];
   chatHistory[currentChatId].push({ fromName: "Você", text });
 
-  messages.innerHTML += `<p><b>Você:</b> ${text}</p>`;
-  messages.scrollTop = messages.scrollHeight;
+  renderMessages(currentChatId);
   messageInput.value = "";
+}
+
+function renderMessages(chatId){
+  messages.innerHTML = "";
+  chatHistory[chatId].forEach(m => {
+    const li = document.createElement("li");
+    li.innerHTML = `<b>${m.fromName}:</b> ${m.text}`;
+    messages.appendChild(li);
+  });
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
 }
 </script>
 
