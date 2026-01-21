@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Fast Mini Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -38,7 +39,7 @@
 
 <script>
 const ws = new WebSocket(
- (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
 );
 
 let myId = null;
@@ -56,6 +57,10 @@ const chatTitle = document.getElementById("chatTitle");
 const messages = document.getElementById("messages");
 const messageInput = document.getElementById("messageInput");
 
+// histórico local (por chat)
+const chatHistory = {};
+
+// ===== WEBSOCKET =====
 ws.onmessage = (event) => {
   const msg = JSON.parse(event.data);
 
@@ -87,29 +92,38 @@ ws.onmessage = (event) => {
 
   // histórico recebido
   if (msg.type === "chat-history") {
-    messages.innerHTML = "";
-    msg.history.forEach(m => {
-      messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
-    });
-    messages.scrollTop = messages.scrollHeight;
+    const id = msg.withId;
+    chatHistory[id] = msg.history;
+
+    if (currentChatId === id) {
+      messages.innerHTML = "";
+      chatHistory[id].forEach(m => {
+        messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
+      });
+      messages.scrollTop = messages.scrollHeight;
+    }
   }
 
   // mensagem recebida
   if (msg.type === "private-message") {
     const chatId = msg.fromId;
 
+    if (!chatHistory[chatId]) chatHistory[chatId] = [];
+    chatHistory[chatId].push({ fromName: msg.fromName, text: msg.text });
+
     if (!document.getElementById("chat-" + chatId)) {
       addChat(chatId, msg.fromName);
     }
 
-    if (currentChatId == chatId) {
+    if (currentChatId === chatId) {
       messages.innerHTML += `<p><b>${msg.fromName}:</b> ${msg.text}</p>`;
       messages.scrollTop = messages.scrollHeight;
     }
   }
 };
 
-function register(){
+// ===== FUNÇÕES =====
+function register() {
   ws.send(JSON.stringify({
     type:"register",
     username: username.value,
@@ -117,7 +131,7 @@ function register(){
   }));
 }
 
-function login(){
+function login() {
   ws.send(JSON.stringify({
     type:"login",
     username: username.value,
@@ -135,7 +149,7 @@ function addChat(id, name){
 
 function openChat(){
   const id = Number(document.getElementById("newChatId").value);
-  if (!id || id === myId) return; // impede abrir chat consigo mesmo
+  if (!id || id === myId) return; // impede falar consigo mesmo
   addChat(id, "Usuário " + id);
   selectChat(id, "Usuário " + id);
 }
@@ -145,7 +159,16 @@ function selectChat(id, name){
   chatWindow.style.display = "block";
   chatTitle.innerText = "Conversando com: " + name;
 
-  // pedir histórico
+  // exibe histórico salvo local
+  if (chatHistory[id]) {
+    messages.innerHTML = "";
+    chatHistory[id].forEach(m => {
+      messages.innerHTML += `<p><b>${m.fromName}:</b> ${m.text}</p>`;
+    });
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // pede histórico do servidor
   ws.send(JSON.stringify({
     type:"load-chat",
     withId: id
@@ -155,15 +178,20 @@ function selectChat(id, name){
 function sendMessage(){
   if (!currentChatId) return;
   if (!messageInput.value) return;
-  if (currentChatId === myId) return;
+  if (currentChatId === myId) return; // impede falar consigo mesmo
 
-  const text = messageInput.value.slice(0,20000);
+  const text = messageInput.value.slice(0,20000); // limite 20k
 
+  // envia
   ws.send(JSON.stringify({
     type:"private-message",
     to: currentChatId,
     text
   }));
+
+  // salva local e mostra
+  if (!chatHistory[currentChatId]) chatHistory[currentChatId] = [];
+  chatHistory[currentChatId].push({ fromName: "Você", text });
 
   messages.innerHTML += `<p><b>Você:</b> ${text}</p>`;
   messages.scrollTop = messages.scrollHeight;
